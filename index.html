@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+    body {
+        font: 10px sans-serif;
+    }
+
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+    }
+
+    .dot {
+        stroke: none;
+    }
+
+</style>
+<body>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+    var margin = {top: 20, right: 120, bottom: 30, left: 40},
+            width = 960 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+
+    var x = d3.time.scale()
+            .range([0, width]);
+
+    var y = d3.scale.linear()
+            .range([0, height]);
+
+    var colors = ["#00008B","#0000CD","#0000FF","#00FFFF","#7CFC00","#FFFF00","#FFA500","#FF4500","#FF0000","#8B0000"];
+
+    var xAxis = d3.svg.axis()
+            .scale(x)
+            .orient("bottom");
+
+    var yAxis = d3.svg.axis()
+            .scale(y)
+            .orient("left");
+
+    var dateFormat = d3.time.format("%Y-%m-%dT%H:%M:%SZ");
+
+    var svg = d3.select("body").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    d3.csv("GliderData_221_10000.csv", function(error, data) {
+
+        data.forEach(function(d) {
+
+            d.obsdate = dateFormat.parse(d.obsdate);
+            d.preswat = +d.preswat; // water pressure as a measure of depth
+            d.tempwat = +d.tempwat; // water temperature
+
+        });
+
+        var extentX = d3.extent(data, function(d) { return d.obsdate; });
+        var extentY = d3.extent(data, function(d) { return d.preswat; });
+        var extentZ = d3.extent(data, function (d) { return d.tempwat;} )
+
+        var colorScale = d3.scale.linear()
+                .domain([0, colors.length-1])
+                .range(extentZ);
+
+        var colorScaler = d3.scale.linear()
+                .range(colors)
+                .domain(d3.range(0,colors.length).map(colorScale));
+
+        x.domain(extentX).nice();
+        y.domain(extentY).nice();
+
+        svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis)
+                .append("text")
+                .attr("class", "label")
+                .attr("x", width)
+                .attr("y", -6)
+                .style("text-anchor", "end")
+                .text("Date");
+
+        svg.append("g")
+                .attr("class", "y axis")
+                .call(yAxis)
+                .append("text")
+                .attr("class", "label")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 6)
+                .attr("dy", ".71em")
+                .style("text-anchor", "end")
+                .text("Depth (meters)")
+
+        svg.selectAll(".dot")
+                .data(data)
+                .enter().append("circle")
+                .attr("class", "dot")
+                .attr("r", 3.5)
+                .attr("cx", function(d) { return x(d.obsdate); })
+                .attr("cy", function(d) { return y(d.preswat); })
+                .style("fill", function(d) { return colorScaler(d.tempwat); });
+
+// show observation as rectangle
+//        svg.selectAll(".rect")
+//                .data(data)
+//                .enter().append("rect")
+//                .attr("class", "dot")
+//                .attr("x", function(d) { return x(d.obsdate); })
+//                .attr("y", function(d) { return y(d.preswat)-7; })
+//                .attr("width", 3)
+//                .attr("height", 14)
+//                .style("fill", function(d) { return colorScaler(d.tempwat); });
+
+        // color bar
+        var colorSpacing = 100 / ( colors.length - 1 );
+
+        var colorBarScale = d3.scale.linear()
+                .range([ 0, height])
+                .domain(extentZ);
+
+        var colorBarAxisY = d3.svg.axis()
+                .scale( colorBarScale  )
+                .ticks( 10 )
+                .tickSubdivide( true )
+                .orient("right");
+
+        var colorBar = svg.append("g")
+            .attr({
+                "id"        : "colorBarG",
+                "transform" : "translate(" + (width+40) + ",0)"
+            });
+
+        colorBar.append("g")
+            .append("defs")
+            .append("linearGradient")
+            .attr({
+                id : "colorBarGradient",
+                x1 : "0%",
+                y1 : "100%",
+                x2 : "0%",
+                y2 : "0%"
+            })
+            .selectAll("stop")
+            .data(colors)
+            .enter()
+            .append("stop")
+            .attr({
+                "offset": function(d,i){return colorSpacing * (i) + "%"},
+                "stop-color":function(d,i){return colors[i]},
+                "stop-opacity":1
+            });
+
+        colorBar.append("g")
+            .append("rect")
+            .attr({
+                "width": 20,
+                "height": height,
+                x: 0,
+                y: 0,
+                stroke:"#000000",
+                "stroke-width":1
+            })
+            .style("fill","url(#colorBarGradient)");
+
+        colorBar.append("g")
+            .attr({
+                "width": 20,
+                "height": height,
+                "transform":"translate(20,0)",
+                "class":"axis"
+            })
+            .call( colorBarAxisY )
+    });
+
+
+</script>
+</body>
+</html>
