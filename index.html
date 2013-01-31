@@ -23,7 +23,7 @@
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
 
-    var margin = {top: 20, right: 120, bottom: 30, left: 40},
+    var margin = {top: 20, right: 20, bottom: 130, left: 40},
             width = 960 - margin.left - margin.right,
             height = 500 - margin.top - margin.bottom;
 
@@ -51,7 +51,7 @@
             .append("g")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    d3.csv("GliderData_221_10000.csv", function(error, data) {
+    d3.csv("GliderData_221_1000.csv", function(error, data) {
 
         data.forEach(function(d) {
 
@@ -60,6 +60,10 @@
             d.tempwat = +d.tempwat; // water temperature
 
         });
+
+        var profileNest = d3.nest()
+            .key(function(d) {return d.profile_id; })
+            .entries(data);
 
         var extentX = d3.extent(data, function(d) { return d.obsdate; });
         var extentY = d3.extent(data, function(d) { return d.preswat; });
@@ -99,8 +103,12 @@
                 .text("Depth (meters)")
 
         svg.selectAll(".dot")
-                .data(data)
-                .enter().append("circle")
+                .data(profileNest)
+            .enter().append("g")
+                .attr("id", function(d) {return "g-" + d.key;} )
+                .selectAll("circle")
+                .data(function(d) {return d.values})
+            .enter().append("circle")
                 .attr("class", "dot")
                 .attr("r", 3.5)
                 .attr("cx", function(d) { return x(d.obsdate); })
@@ -122,19 +130,19 @@
         var colorSpacing = 100 / ( colors.length - 1 );
 
         var colorBarScale = d3.scale.linear()
-                .range([ 0, height])
+                .range([ 0, width])
                 .domain(extentZ);
 
         var colorBarAxisY = d3.svg.axis()
                 .scale( colorBarScale  )
                 .ticks( 10 )
                 .tickSubdivide( true )
-                .orient("right");
+                .orient("bottom");
 
         var colorBar = svg.append("g")
             .attr({
                 "id"        : "colorBarG",
-                "transform" : "translate(" + (width+40) + ",0)"
+                "transform" : "translate(0," + (height+40) + ")"
             });
 
         colorBar.append("g")
@@ -143,8 +151,8 @@
             .attr({
                 id : "colorBarGradient",
                 x1 : "0%",
-                y1 : "100%",
-                x2 : "0%",
+                y1 : "0%",
+                x2 : "100%",
                 y2 : "0%"
             })
             .selectAll("stop")
@@ -160,8 +168,8 @@
         colorBar.append("g")
             .append("rect")
             .attr({
-                "width": 20,
-                "height": height,
+                "width": width,
+                "height": 20,
                 x: 0,
                 y: 0,
                 stroke:"#000000",
@@ -171,9 +179,9 @@
 
         colorBar.append("g")
             .attr({
-                "width": 20,
-                "height": height,
-                "transform":"translate(20,0)",
+                "width": width,
+                "height": 20,
+                "transform":"translate(0,20)",
                 "class":"axis"
             })
             .call( colorBarAxisY )
